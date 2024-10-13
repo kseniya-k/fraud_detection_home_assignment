@@ -124,9 +124,3 @@ def prepare_data(config: Config, output_name: str):
     data = add_features(data)
     data = data.drop(columns=config.drop_columns_data)
     write_data(config, data, "data_prepared.csv", overwrite=True)
-
-
-config = Config()
-print("confg opened")
-prepare_data(config, "test_preparation")
-print("data prepared")
