@@ -1,6 +1,7 @@
 import json
 from typing import Any, Dict
 
+import lightgbm
 import pandas as pd
 
 from config import Config
@@ -48,17 +49,44 @@ def write_encoding(
     if not overwrite and path.exists():
         raise ValueError(f"Encoding on path {path} already exists")
 
-    with open(path) as file:
+    with open(path, "w") as file:
         json.dump(encoding, file)
+
+
+def load_encoding(config: Config, name: str) -> Dict[str, Dict[str, int]]:
+    """
+    Load encoding from .json file config.base_path + name
+    """
+    path = config.base_path.joinpath(name)
+
+    if not path.exists():
+        raise ValueError(f"Encoding not found on path {path}")
+
+    with open(path, "r") as file:
+        encoding = json.load(file)
+
+    return encoding
 
 
 def write_model(config: Config, model: Any, name: str, overwrite: bool = False):
     """
-    Write model as .lightgbm file to to config.base_path + name
+    Write model as .lightgbm file to config.base_path + name
     """
     path = config.base_path.joinpath(name)
 
     if not overwrite and path.exists():
         raise ValueError(f"Model on path {path} already exists")
 
-    model.booster_.save_model(path)
+    model.booster_.save_model(path, num_iteration=model.best_iteration)
+
+
+def load_model(config: Config, name: str):
+    """
+    Load model from .lightgbm file config.base_path + name
+    """
+    path = config.base_path.joinpath(name)
+
+    if not path.exists():
+        raise ValueError(f"Model not found on path {path}")
+
+    return lightgbm.Booster(model_file=path)

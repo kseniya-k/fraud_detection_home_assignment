@@ -81,9 +81,8 @@ class Config:
         "merchant_country",
     ]
 
-    # if true: evaluate metrics on cross-validation
-    # if false: train prod-like model on all amount of given data
-    do_evaluate_corssval_metrics: bool = True
+    encoding_filename: str = "encoding.json"
+    model_filename: str = "model.lightgbm"
 
     def get_path(self, filename: str) -> Path:
         """
