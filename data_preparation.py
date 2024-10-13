@@ -1,8 +1,10 @@
 import datetime
 import json
-import pandas as pd
 import logging
 from typing import Dict, List
+
+import pandas as pd
+
 from config import Config
 from utils import load_data, write_data, write_encoding
 
