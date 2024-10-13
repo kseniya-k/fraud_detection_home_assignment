@@ -20,7 +20,7 @@ def parse_month_year_column(df: pd.DataFrame, column: str, feature_name: str) ->
     Parse df column from format `month/year` to datetime. Save result to new column `feature_name`
     """
     df[feature_name] = df[column].apply(lambda x: datetime.date(int(x.split("/")[-1]), int(x.split("/")[0]), 1))
-    df[feature_name] = pd.to_datetime(df[feature_name]) 
+    df[feature_name] = pd.to_datetime(df[feature_name])
     return df
 
 
@@ -31,11 +31,11 @@ def transform_data(config: Config, transactions: pd.DataFrame, cards: pd.DataFra
     - join data
     - drop unused columns
     """
-    transactions["target"] = transactions["Is Fraud?"].replace({"No": 0, "Yes": 1})
+    transactions["target"] = transactions["Is Fraud?"].apply(lambda x: 0 if x == "No" else 1)
     transactions["datetime"] = transactions.apply(lambda x: datetime.datetime(x["Year"], x["Month"], x["Day"], int(x["Time"].split(":")[0]), int(x["Time"].split(":")[1]), 0), axis=1)
     transactions["datetime"] = pd.to_datetime(transactions["datetime"])
-    
-    # drop dollar sign $ 
+
+    # drop dollar sign $
     for column, feature_name in config.transactions_transform_dollar.items():
         transactions = parse_dollar_column(transactions, column, feature_name)
 
@@ -74,7 +74,7 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     - days_before_expire: int - days between transaction and card expiration
     - days_from_acc_open: int - days between bank account opening and transaction
     - errors_count: int - total count of transaction errors
-    
+
     ToDo: add daily transactions count by user, by card, by appartment; add amount of time between transactions from one user and card
     """
     df["merchant_country"] = df["Merchant State"].apply(lambda x: "USA" if len(x) == 2 and x.upper() == x else x)
@@ -96,7 +96,7 @@ def prepare_data(config: Config, output_name: str):
     - drop unused columns
     - save result as .csv to config.base_path + output_name
 
-    Each dataframe expected to have all columns from example 
+    Each dataframe expected to have all columns from example
     """
     transactions = load_data(config, config.filename_transactions)
     cards = load_data(config, config.filename_cards)
@@ -115,5 +115,3 @@ config = Config()
 print("confg opened")
 prepare_data(config, "test_preparation")
 print("data prepared")
-
-    
