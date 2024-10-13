@@ -1,17 +1,13 @@
 import datetime
-import json
 import logging
-from typing import Dict, List
 
 import pandas as pd
 
 from config import Config
-from utils import load_data, write_data, write_encoding
+from utils import load_data, write_data
 
 
-def parse_dollar_column(
-    df: pd.DataFrame, column: str, feature_name: str
-) -> pd.DataFrame:
+def parse_dollar_column(df: pd.DataFrame, column: str, feature_name: str) -> pd.DataFrame:
     """
     Parse df column from format `$123.34` to float `123.45`. Save result to new column `feature_name`
     """
@@ -19,15 +15,11 @@ def parse_dollar_column(
     return df
 
 
-def parse_month_year_column(
-    df: pd.DataFrame, column: str, feature_name: str
-) -> pd.DataFrame:
+def parse_month_year_column(df: pd.DataFrame, column: str, feature_name: str) -> pd.DataFrame:
     """
     Parse df column from format `month/year` to datetime. Save result to new column `feature_name`
     """
-    df[feature_name] = df[column].apply(
-        lambda x: datetime.date(int(x.split("/")[-1]), int(x.split("/")[0]), 1)
-    )
+    df[feature_name] = df[column].apply(lambda x: datetime.date(int(x.split("/")[-1]), int(x.split("/")[0]), 1))
     df[feature_name] = pd.to_datetime(df[feature_name])
     return df
 
@@ -41,9 +33,7 @@ def transform_data(
     - join data
     - drop unused columns
     """
-    transactions["target"] = transactions["Is Fraud?"].apply(
-        lambda x: 0 if x == "No" else 1
-    )
+    transactions["target"] = transactions["Is Fraud?"].apply(lambda x: 0 if x == "No" else 1)
     transactions["datetime"] = transactions.apply(
         lambda x: datetime.datetime(
             x["Year"],
@@ -99,20 +89,17 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     - days_from_acc_open: int - days between bank account opening and transaction
     - errors_count: int - total count of transaction errors
 
-    ToDo: add daily transactions count by user, by card, by appartment; add amount of time between transactions from one user and card
+    ToDo: add daily transactions count by user, by card, by appartment
+    ToDo: add amount of time between transactions from one user and card
     """
-    df["merchant_country"] = df["Merchant State"].apply(
-        lambda x: "USA" if len(x) == 2 and x.upper() == x else x
-    )
+    df["merchant_country"] = df["Merchant State"].apply(lambda x: "USA" if len(x) == 2 and x.upper() == x else x)
     df["is_city_equal"] = df.apply(lambda x: x["City"] == x["Merchant City"], axis=1)
     df["amount_limit_rate"] = df["amount"] / df["credit_limit"]
     df["debt_limit_rate"] = df["total_debt"] / df["credit_limit"]
     df["is_pin_change_year"] = df["Year PIN last Changed"] == df["Year"]
     df["days_before_expire"] = (df["expires"] - df["datetime"]).dt.days
     df["days_from_acc_open"] = (df["datetime"] - df["account_open_date"]).dt.days
-    df["errors_count"] = df["Errors?"].apply(
-        lambda x: len(x.split(",")) if x != "no_errors" else 0
-    )
+    df["errors_count"] = df["Errors?"].apply(lambda x: len(x.split(",")) if x != "no_errors" else 0)
     return df
 
 

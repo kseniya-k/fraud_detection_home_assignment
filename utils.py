@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+import json
+from typing import Any, Dict
 
 import pandas as pd
 
@@ -21,7 +22,7 @@ def load_data(config: Config, name: str) -> pd.DataFrame:
     return df
 
 
-def write_data(config: Config, df: pd.DataFrame, name: str, overwrite: False):
+def write_data(config: Config, df: pd.DataFrame, name: str, overwrite: bool = False):
     """
     Write data to .csv file to config.base_path + name
     """
@@ -34,7 +35,10 @@ def write_data(config: Config, df: pd.DataFrame, name: str, overwrite: False):
 
 
 def write_encoding(
-    config: Config, encoding: Dict[str, Dict[str, int]], name: str, overwrite: False
+    config: Config,
+    encoding: Dict[str, Dict[str, int]],
+    name: str,
+    overwrite: bool = False,
 ):
     """
     Write encoding to .json file to config.base_path + name
@@ -45,10 +49,10 @@ def write_encoding(
         raise ValueError(f"Encoding on path {path} already exists")
 
     with open(path) as file:
-        json.dump(encoding, path)
+        json.dump(encoding, file)
 
 
-def write_model(config: Config, model: Any, name: str, overwrite: False):
+def write_model(config: Config, model: Any, name: str, overwrite: bool = False):
     """
     Write model as .lightgbm file to to config.base_path + name
     """

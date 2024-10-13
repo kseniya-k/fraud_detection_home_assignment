@@ -8,13 +8,13 @@ class Config:
     """
 
     # input and output data location
-    base_path: Path = Path("./data")  # replace it with full path of data folder
+    base_path: Path = Path("./data")
     filename_transactions: str = "credit_card_transactions-ibm_v2.csv"
     filename_cards: str = "sd254_cards.csv"
     filename_users: str = "sd254_users.csv"
 
     # columns for certain types of preprocessing
-    # each input file has its own dict with format {`column_name`: `feature_name`}
+    # each input file has its own dict with format: {`column_name`: `feature_name`}
     transactions_transform_dollar: Dict[str, str] = {"Amount": "amount"}
     cards_transform_dollar: Dict[str, str] = {"Credit Limit": "credit_limit"}
     users_transform_dollar: Dict[str, str] = {
