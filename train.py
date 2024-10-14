@@ -37,8 +37,7 @@ def apply_encoding(df: pd.DataFrame, cat_columns: List[str], encoding: Dict[str,
     """
     for column in cat_columns:
         encoding_column = encoding.get(column, {})
-        df[column + "_encoded"] = df[column].copy()
-        df[column + "_encoded"] = df[column + "_encoded"].apply(lambda x: encoding_column.get(x, -1))
+        df.loc[:, column + "_encoded"] = df[column].apply(lambda x: encoding_column.get(str(x), -1))
 
     df = df.drop(columns=cat_columns)
     return df
@@ -57,36 +56,46 @@ def evaluate_metrics(config: Config, plot_learning_curve: bool = False):
     data = load_data(config, "data_prepared.csv")
 
     target = data["target"].values
-    data = data.drop(columns=["target"]).sample(100000)
+    data = data.drop(columns=["target"])
 
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
     metrics = []
-    for i, (train_index, test_index) in enumerate(kfold.split(data)):
+    for train_index, test_index in kfold.split(data):
+        validation_index = np.random.choice(train_index, int(len(train_index) * config.validation_rate))
+        train_index = [i for i in train_index if i not in validation_index]
+
         X_train = data.iloc[train_index]
         y_train = target[train_index]
+
+        X_valid = data.iloc[validation_index]
+        y_valid = target[validation_index]
 
         X_test = data.iloc[test_index]
         y_test = target[test_index]
 
         encoding = build_encoding(X_train, config.categorical_columns)
-        train_encoded = apply_encoding(X_train, config.categorical_columns, encoding)
-        test_encoded = apply_encoding(X_test, config.categorical_columns, encoding)
+        X_train_encoded = apply_encoding(X_train, config.categorical_columns, encoding)
+        X_valid_encoded = apply_encoding(X_valid, config.categorical_columns, encoding)
+        X_test_encoded = apply_encoding(X_test, config.categorical_columns, encoding)
 
         model = lightgbm.LGBMClassifier(**config.model_params)
         model.fit(
-            train_encoded,
+            X_train_encoded,
             y_train,
             categorical_feature=[f"{c}_encoded" for c in config.categorical_columns],
             feature_name="auto",
-            eval_set=[(X_test, y_test), (X_train, y_train)],
+            eval_set=[(X_valid_encoded, y_valid), (X_train_encoded, y_train)],
+            callbacks=[
+                lightgbm.early_stopping(stopping_rounds=20),
+            ],
         )
-        predict = model.predict(test_encoded)
+        predict = model.predict(X_test_encoded)
 
         metric = f1_score(y_test, predict)
         metrics.append(metric)
 
     metric_mean = np.mean(metrics)
-    logging.info("F1-score on cross-validation: ", metric_mean)
+    logging.info("F1-score on cross-validation: ", float(metric_mean))
 
     meta = {"full_model_params": model.get_params(), "extra_model_params": config.model_params, "f1-score": metric_mean}
 
@@ -102,24 +111,40 @@ def train_production(config: Config):
     Train model for production: load data and encode, train model, save encoding and model
     ToDo: save metrics on train
     """
-    data = load_data(config, "data_prepared.csv").sample(100000)
+    data = load_data(config, "data_prepared.csv")
     target = data["target"].values
     data = data.drop(columns=["target"])
 
+    train_index = np.arange(data.shape[0])
+    validation_index = np.random.choice(train_index, int(data.shape[0] * config.validation_rate))
+    train_index = [i for i in train_index if i not in validation_index]
+
+    X_train = data.iloc[train_index]
+    y_train = target[train_index]
+
+    X_valid = data.iloc[validation_index]
+    y_valid = target[validation_index]
+
     encoding = build_encoding(data, config.categorical_columns)
-    data_encoded = apply_encoding(data, config.categorical_columns, encoding)
+    X_train_encoded = apply_encoding(X_train, config.categorical_columns, encoding)
+    X_valid_encoded = apply_encoding(X_valid, config.categorical_columns, encoding)
     write_encoding(config, encoding, config.encoding_filename)
 
     model = lightgbm.LGBMClassifier()
     model.fit(
-        data_encoded,
-        target,
+        X_train_encoded,
+        y_train,
         categorical_feature=[f"{c}_encoded" for c in config.categorical_columns],
         feature_name="auto",
+        eval_set=[(X_valid_encoded, y_valid), (X_train_encoded, y_train)],
+        callbacks=[
+            lightgbm.early_stopping(stopping_rounds=20),
+        ],
     )
     write_model(config, model, config.model_filename)
 
 
-config = Config()
-evaluate_metrics(config)
-train_production(config)
+# how to test:
+# config = Config()
+# evaluate_metrics(config, plot_learning_curve=True)
+# train_production(config)
