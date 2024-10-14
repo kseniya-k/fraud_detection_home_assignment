@@ -83,6 +83,10 @@ class Config:
 
     encoding_filename: str = "encoding.json"
     model_filename: str = "model.lightgbm"
+    meta_filename: str = "meta.json"
+
+    # extra params for model training
+    model_params = {"is_unbalance": True}
 
     def get_path(self, filename: str) -> Path:
         """

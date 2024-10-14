@@ -2,13 +2,14 @@ import logging
 from typing import Dict, List
 
 import lightgbm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
 
 from config import Config
-from utils import load_data, write_encoding, write_model
+from utils import load_data, write_encoding, write_meta, write_model
 
 
 def build_encoding(df: pd.DataFrame, cat_columns: List[str]) -> Dict[str, Dict[str, int]]:
@@ -23,7 +24,7 @@ def build_encoding(df: pd.DataFrame, cat_columns: List[str]) -> Dict[str, Dict[s
     encoding = {}
     for column in cat_columns:
         df_frequency = df[column].value_counts().index.values
-        encoding_column = {value: code for code, value in enumerate(df_frequency)}
+        encoding_column = {str(value): code for code, value in enumerate(df_frequency)}
         encoding[column] = encoding_column
 
     return encoding
@@ -36,16 +37,22 @@ def apply_encoding(df: pd.DataFrame, cat_columns: List[str], encoding: Dict[str,
     """
     for column in cat_columns:
         encoding_column = encoding.get(column, {})
-        df[column + "_encoded"] = df[column].apply(lambda x: encoding_column.get(x, -1))
+        df[column + "_encoded"] = df[column].copy()
+        df[column + "_encoded"] = df[column + "_encoded"].apply(lambda x: encoding_column.get(x, -1))
 
     df = df.drop(columns=cat_columns)
     return df
 
 
-def evaluate_metrics(config: Config):
+def evaluate_metrics(config: Config, plot_learning_curve: bool = False):
     """
     Load and encode data, compute metrics on cross-validation, write F1-score to log
+
     ToDo: save loss on train and validation, save train time
+    ToDo: save learning curve to file
+
+    :param config: current configuration
+    :param plot_learning_curve: if True, plot learning curve on last fold
     """
     data = load_data(config, "data_prepared.csv")
 
@@ -54,23 +61,24 @@ def evaluate_metrics(config: Config):
 
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
     metrics = []
-    for train_index, test_index in kfold.split(data):
-        train = data.iloc[train_index]
+    for i, (train_index, test_index) in enumerate(kfold.split(data)):
+        X_train = data.iloc[train_index]
         y_train = target[train_index]
 
-        test = data.iloc[test_index]
+        X_test = data.iloc[test_index]
         y_test = target[test_index]
 
-        encoding = build_encoding(train, config.categorical_columns)
-        train_encoded = apply_encoding(train, config.categorical_columns, encoding)
-        test_encoded = apply_encoding(test, config.categorical_columns, encoding)
+        encoding = build_encoding(X_train, config.categorical_columns)
+        train_encoded = apply_encoding(X_train, config.categorical_columns, encoding)
+        test_encoded = apply_encoding(X_test, config.categorical_columns, encoding)
 
-        model = lightgbm.LGBMClassifier(is_unbalance=True)
+        model = lightgbm.LGBMClassifier(**config.model_params)
         model.fit(
             train_encoded,
             y_train,
             categorical_feature=[f"{c}_encoded" for c in config.categorical_columns],
             feature_name="auto",
+            eval_set=[(X_test, y_test), (X_train, y_train)],
         )
         predict = model.predict(test_encoded)
 
@@ -79,6 +87,14 @@ def evaluate_metrics(config: Config):
 
     metric_mean = np.mean(metrics)
     logging.info("F1-score on cross-validation: ", metric_mean)
+
+    meta = {"full_model_params": model.get_params(), "extra_model_params": config.model_params, "f1-score": metric_mean}
+
+    if plot_learning_curve:
+        lightgbm.plot_metric(model)
+        plt.show()
+
+    write_meta(config, meta, config.meta_filename)
 
 
 def train_production(config: Config):

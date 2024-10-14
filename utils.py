@@ -23,7 +23,7 @@ def load_data(config: Config, name: str) -> pd.DataFrame:
     return df
 
 
-def write_data(config: Config, df: pd.DataFrame, name: str, overwrite: bool = False):
+def write_data(config: Config, df: pd.DataFrame, name: str, overwrite: bool = True):
     """
     Write data to .csv file to config.base_path + name
     """
@@ -68,7 +68,7 @@ def load_encoding(config: Config, name: str) -> Dict[str, Dict[str, int]]:
     return encoding
 
 
-def write_model(config: Config, model: Any, name: str, overwrite: bool = False):
+def write_model(config: Config, model: Any, name: str, overwrite: bool = True):
     """
     Write model as .lightgbm file to config.base_path + name
     """
@@ -77,7 +77,7 @@ def write_model(config: Config, model: Any, name: str, overwrite: bool = False):
     if not overwrite and path.exists():
         raise ValueError(f"Model on path {path} already exists")
 
-    model.booster_.save_model(path, num_iteration=model.best_iteration)
+    model.booster_.save_model(path)
 
 
 def load_model(config: Config, name: str):
@@ -90,3 +90,16 @@ def load_model(config: Config, name: str):
         raise ValueError(f"Model not found on path {path}")
 
     return lightgbm.Booster(model_file=path)
+
+
+def write_meta(config: Config, meta: Dict[str, Any], name: str, overwrite: bool = True):
+    """
+    Write meta-information about config and model parameters to .json file to config.base_path + name
+    """
+    path = config.base_path.joinpath(name)
+
+    if not overwrite and path.exists():
+        raise ValueError(f"Meta on path {path} already exists")
+
+    with open(path, "w") as file:
+        json.dump(meta, file)
