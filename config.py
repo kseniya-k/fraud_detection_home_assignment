@@ -86,7 +86,8 @@ class Config:
     meta_filename: str = "meta.json"
 
     # extra params for model training
-    model_params = {"is_unbalance": True}
+    validation_rate: float = 0.05
+    model_params = {"n_estimators": 100, "scale_pos_weight": 99, "max_depth": 10}
 
     def get_path(self, filename: str) -> Path:
         """
