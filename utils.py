@@ -39,7 +39,7 @@ def write_encoding(
     config: Config,
     encoding: Dict[str, Dict[str, int]],
     name: str,
-    overwrite: bool = False,
+    overwrite: bool = True,
 ):
     """
     Write encoding to .json file to config.base_path + name
