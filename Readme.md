@@ -77,6 +77,7 @@ Prediction steps 1-2, 6 can also be done automaticaly on some other schedule, fo
 Code:
 - Add unit tests to most of functions, add end-to-end tests to train and predict pipelines
 - Prepare data by batches in parallel
+- Optimize pandas computations
 
 Usability in production:
 - Save data and model version after training new model. Detect latest stable model and use it for prediction.
@@ -88,4 +89,4 @@ Model performance:
 - Optimize lightgbm hyperparameters, try other models
 - Perform feature selection by feature importance
 - Analyze few cases: take feature importance, SHAP, trees themselves, train objects related to this case
-- Parse "Errors?" column
+- Add more features
