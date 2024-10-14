@@ -49,15 +49,18 @@ def evaluate_metrics(config: Config, plot_learning_curve: bool = False):
 
     ToDo: save loss on train and validation, save train time
     ToDo: save learning curve to file
+    ToDo: move early stopping rounds to config
 
     :param config: current configuration
     :param plot_learning_curve: if True, plot learning curve on last fold
     """
+    logging.info("Load data")
     data = load_data(config, "data_prepared.csv")
 
     target = data["target"].values
     data = data.drop(columns=["target"])
 
+    logging.info("Run K-Fold cross validation")
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
     metrics = []
     for train_index, test_index in kfold.split(data):
@@ -97,12 +100,12 @@ def evaluate_metrics(config: Config, plot_learning_curve: bool = False):
     metric_mean = np.mean(metrics)
     logging.info("F1-score on cross-validation: ", float(metric_mean))
 
-    meta = {"full_model_params": model.get_params(), "extra_model_params": config.model_params, "f1-score": metric_mean}
-
     if plot_learning_curve:
         lightgbm.plot_metric(model)
         plt.show()
 
+    logging.info("Save meta info and metrics")
+    meta = {"full_model_params": model.get_params(), "extra_model_params": config.model_params, "f1-score": metric_mean}
     write_meta(config, meta, config.meta_filename)
 
 
@@ -111,6 +114,7 @@ def train_production(config: Config):
     Train model for production: load data and encode, train model, save encoding and model
     ToDo: save metrics on train
     """
+    logging.info("Load data")
     data = load_data(config, "data_prepared.csv")
     target = data["target"].values
     data = data.drop(columns=["target"])
@@ -130,6 +134,7 @@ def train_production(config: Config):
     X_valid_encoded = apply_encoding(X_valid, config.categorical_columns, encoding)
     write_encoding(config, encoding, config.encoding_filename)
 
+    logging.info("Train model")
     model = lightgbm.LGBMClassifier()
     model.fit(
         X_train_encoded,
@@ -141,6 +146,8 @@ def train_production(config: Config):
             lightgbm.early_stopping(stopping_rounds=20),
         ],
     )
+
+    logging.info("Save model")
     write_model(config, model, config.model_filename)
 
 

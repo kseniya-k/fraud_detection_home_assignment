@@ -9,7 +9,7 @@ from utils import load_data, write_data
 
 def parse_dollar_column(df: pd.DataFrame, column: str, feature_name: str) -> pd.DataFrame:
     """
-    Parse df column from format `$123.34` to float `123.45`. Save result to new column `feature_name`
+    Parse df column from string format `$123.34` to float `123.45`. Save result to new column `feature_name`
     """
     df[feature_name] = df[column].apply(lambda x: float(x[1:]))
     return df
@@ -82,7 +82,7 @@ def transform_data(
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Extract some simple features:
-    - merchant_country: str - USA if `Merchant State` is a USA state, else country
+    - merchant_country: str - USA if `Merchant State` is an USA state, else country name
     - is_city_equal: bool - if user city is equal to merchant city
     - amount_limit_rate: float - amount divided by user credit limit
     - debt_limit_rate: float - user debt divided by user credit limit
@@ -93,6 +93,7 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
     ToDo: add daily transactions count by user, by card, by appartment
     ToDo: add amount of time between transactions from one user and card
+    ToDo: parse `Errors?` column
     """
     df["merchant_country"] = df["Merchant State"].apply(lambda x: "USA" if len(x) == 2 and x.upper() == x else x)
     df["is_city_equal"] = df.apply(lambda x: x["City"] == x["Merchant City"], axis=1)
@@ -108,9 +109,8 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 def prepare_data(config: Config, output_name: str):
     """
     Preprocess data:
-    - parse date and money columns
-    - join data
-    - drop unused columns
+    - parse date and money columns, join data, drop unused columns
+    - add new features
     - save result as .csv to config.base_path + output_name
 
     Each dataframe expected to have all columns from example
