@@ -33,7 +33,9 @@ def transform_data(
     - join data
     - drop unused columns
     """
-    transactions["target"] = transactions["Is Fraud?"].apply(lambda x: 0 if x == "No" else 1)
+    if "Is Fraud?" in transactions.columns:
+        transactions["target"] = transactions["Is Fraud?"].apply(lambda x: 0 if x == "No" else 1)
+
     transactions["datetime"] = transactions.apply(
         lambda x: datetime.datetime(
             x["Year"],
@@ -123,4 +125,9 @@ def prepare_data(config: Config, output_name: str):
     logging.info("Add new features")
     data = add_features(data)
     data = data.drop(columns=config.drop_columns_data)
-    write_data(config, data, "data_prepared.csv", overwrite=True)
+    write_data(config, data, output_name, overwrite=True)
+
+
+# how to test:
+# config = Config()
+# prepare_data(config, "data_prepared.csv")
